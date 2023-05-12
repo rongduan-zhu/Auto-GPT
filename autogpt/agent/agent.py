@@ -15,6 +15,7 @@ from autogpt.log_cycle.log_cycle import (
     LogCycleHandler,
 )
 from autogpt.logs import logger, print_assistant_thoughts
+from autogpt.server.server import AutoGptResponse, send_to_server
 from autogpt.speech import say_text
 from autogpt.spinner import Spinner
 from autogpt.utils import clean_input
@@ -61,6 +62,7 @@ class Agent:
         system_prompt,
         triggering_prompt,
         workspace_directory,
+        channel,
     ):
         cfg = Config()
         self.ai_name = ai_name
@@ -79,6 +81,7 @@ class Agent:
         self.created_at = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.cycle_count = 0
         self.log_cycle_handler = LogCycleHandler()
+        self.channel = channel
 
     def start_interaction_loop(self):
         # Interaction Loop
@@ -87,6 +90,7 @@ class Agent:
         command_name = None
         arguments = None
         user_input = ""
+        send_message = send_to_server(self.channel)
 
         while True:
             # Discontinue if continuous limit is reached
@@ -109,6 +113,7 @@ class Agent:
                 )
                 break
             # Send message to AI, get response
+            send_message("Thinking...")
             with Spinner("Thinking... "):
                 assistant_reply = chat_with_ai(
                     self,
@@ -131,7 +136,10 @@ class Agent:
                 # Get command name and arguments
                 try:
                     print_assistant_thoughts(
-                        self.ai_name, assistant_reply_json, cfg.speak_mode
+                        self.ai_name,
+                        assistant_reply_json,
+                        cfg.speak_mode,
+                        send_message=send_message,
                     )
                     command_name, arguments = get_command(assistant_reply_json)
                     if cfg.speak_mode:
@@ -154,6 +162,9 @@ class Agent:
                 # Get key press: Prompt the user to press enter to continue or escape
                 # to exit
                 self.user_input = ""
+                send_message(
+                    f"NEXT ACTION: COMMAND = {command_name} ARGUMENTS = {arguments}"
+                )
                 logger.typewriter_log(
                     "NEXT ACTION: ",
                     Fore.CYAN,
@@ -161,6 +172,9 @@ class Agent:
                     f"ARGUMENTS = {Fore.CYAN}{arguments}{Style.RESET_ALL}",
                 )
 
+                send_message(
+                    "Enter 'y' to authorise command, 'y -N' to run N continuous commands, 's' to run self-feedback commands or 'n' to exit program, or enter feedback for {self.ai_name}..."
+                )
                 logger.info(
                     "Enter 'y' to authorise command, 'y -N' to run N continuous commands, 's' to run self-feedback commands or "
                     "'n' to exit program, or enter feedback for "
@@ -168,10 +182,16 @@ class Agent:
                 )
                 while True:
                     if cfg.chat_messages_enabled:
-                        console_input = clean_input("Waiting for your response...")
+                        console_input = clean_input(
+                            "Waiting for your response...",
+                            send_message=send_message,
+                            channel=self.channel,
+                        )
                     else:
                         console_input = clean_input(
-                            Fore.MAGENTA + "Input:" + Style.RESET_ALL
+                            Fore.MAGENTA + "Input:" + Style.RESET_ALL,
+                            send_message=send_message,
+                            channel=self.channel,
                         )
                     if console_input.lower().strip() == cfg.authorise_key:
                         user_input = "GENERATE NEXT COMMAND JSON"

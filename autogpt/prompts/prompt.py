@@ -70,7 +70,7 @@ def build_default_prompt_generator() -> PromptGenerator:
     return prompt_generator
 
 
-def construct_main_ai_config() -> AIConfig:
+def construct_main_ai_config(send_message, channel) -> AIConfig:
     """Construct the prompt for the AI to respond to
 
     Returns:
@@ -86,6 +86,9 @@ def construct_main_ai_config() -> AIConfig:
             Fore.GREEN,
             "infinite" if config.api_budget <= 0 else f"${config.api_budget}",
         )
+        send_message(
+            f'Name: {config.ai_name}\nRole: {config.ai_role}\nGoals: {config.ai_goals}\nAPI Budget: {"infinite" if config.api_budget <= 0 else f"${config.api_budget}"}\n{DEFAULT_TRIGGERING_PROMPT}'
+        )
     elif config.ai_name:
         logger.typewriter_log(
             "Welcome back! ",
@@ -93,19 +96,24 @@ def construct_main_ai_config() -> AIConfig:
             f"Would you like me to return to being {config.ai_name}?",
             speak_text=True,
         )
+        send_message(
+            f"Welcome back! Would you like me to return to being {config.ai_name}?"
+        )
         should_continue = clean_input(
             f"""Continue with the last settings?
 Name:  {config.ai_name}
 Role:  {config.ai_role}
 Goals: {config.ai_goals}
 API Budget: {"infinite" if config.api_budget <= 0 else f"${config.api_budget}"}
-Continue ({CFG.authorise_key}/{CFG.exit_key}): """
+Continue ({CFG.authorise_key}/{CFG.exit_key}): """,
+            send_message=send_message,
+            channel=channel,
         )
         if should_continue.lower() == CFG.exit_key:
             config = AIConfig()
 
     if not config.ai_name:
-        config = prompt_user()
+        config = prompt_user(send_message=send_message, channel=channel)
         config.save(CFG.ai_settings_file)
 
     # set the total api budget
@@ -119,6 +127,7 @@ Continue ({CFG.authorise_key}/{CFG.exit_key}): """
         "has been created with the following details:",
         speak_text=True,
     )
+    send_message(f"{config.ai_name} has been created with the following details:")
 
     # Print the ai config details
     # Name
@@ -127,7 +136,9 @@ Continue ({CFG.authorise_key}/{CFG.exit_key}): """
     logger.typewriter_log("Role:", Fore.GREEN, config.ai_role, speak_text=False)
     # Goals
     logger.typewriter_log("Goals:", Fore.GREEN, "", speak_text=False)
+    send_message(f"Name: {config.ai_name}\nRole: {config.ai_role}\nGoals:\n")
     for goal in config.ai_goals:
         logger.typewriter_log("-", Fore.GREEN, goal, speak_text=False)
+        send_message(f"- {goal}")
 
     return config

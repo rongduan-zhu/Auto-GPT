@@ -5,7 +5,7 @@ import random
 import re
 import time
 from logging import LogRecord
-from typing import Any
+from typing import Any, Callable
 
 from colorama import Fore, Style
 
@@ -255,6 +255,7 @@ def print_assistant_thoughts(
     ai_name: object,
     assistant_reply_json_valid: object,
     speak_mode: bool = False,
+    send_message: Callable[[str], None] = lambda message: None,
 ) -> None:
     assistant_thoughts_reasoning = None
     assistant_thoughts_plan = None
@@ -268,16 +269,21 @@ def print_assistant_thoughts(
         assistant_thoughts_plan = assistant_thoughts.get("plan")
         assistant_thoughts_criticism = assistant_thoughts.get("criticism")
         assistant_thoughts_speak = assistant_thoughts.get("speak")
+    send_message(f"{ai_name.upper()} THOUGHTS: {assistant_thoughts_text}")
     logger.typewriter_log(
         f"{ai_name.upper()} THOUGHTS:", Fore.YELLOW, f"{assistant_thoughts_text}"
     )
+    send_message(f"{ai_name.upper()} REASONING: {assistant_thoughts_reasoning}")
     logger.typewriter_log("REASONING:", Fore.YELLOW, f"{assistant_thoughts_reasoning}")
     if assistant_thoughts_plan:
+        send_message(f"{ai_name.upper()} PLAN:")
         logger.typewriter_log("PLAN:", Fore.YELLOW, "")
         # If it's a list, join it into a string
         if isinstance(assistant_thoughts_plan, list):
+            send_message("\n".join(assistant_thoughts_plan))
             assistant_thoughts_plan = "\n".join(assistant_thoughts_plan)
         elif isinstance(assistant_thoughts_plan, dict):
+            send_message(str(assistant_thoughts_plan))
             assistant_thoughts_plan = str(assistant_thoughts_plan)
 
         # Split the input_string using the newline character and dashes
@@ -285,6 +291,7 @@ def print_assistant_thoughts(
         for line in lines:
             line = line.lstrip("- ")
             logger.typewriter_log("- ", Fore.GREEN, line.strip())
+    send_message(f"{ai_name.upper()} CRITICISM: {assistant_thoughts_criticism}")
     logger.typewriter_log("CRITICISM:", Fore.YELLOW, f"{assistant_thoughts_criticism}")
     # Speak the assistant's thoughts
     if speak_mode and assistant_thoughts_speak:

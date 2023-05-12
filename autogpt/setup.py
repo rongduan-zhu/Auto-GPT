@@ -12,7 +12,7 @@ from autogpt.logs import logger
 CFG = Config()
 
 
-def prompt_user() -> AIConfig:
+def prompt_user(channel, send_message) -> AIConfig:
     """Prompt the user for input
 
     Returns:
@@ -28,6 +28,7 @@ def prompt_user() -> AIConfig:
         "run with '--help' for more information.",
         speak_text=True,
     )
+    send_message("Welcome to Auto-GPT!")
 
     # Get user desire
     logger.typewriter_log(
@@ -38,7 +39,9 @@ def prompt_user() -> AIConfig:
     )
 
     user_desire = utils.clean_input(
-        f"{Fore.LIGHTBLUE_EX}I want Auto-GPT to{Style.RESET_ALL}: "
+        f"{Fore.LIGHTBLUE_EX}I want Auto-GPT to{Style.RESET_ALL}: ",
+        channel=channel,
+        send_message=send_message,
     )
 
     if user_desire == "":
@@ -51,7 +54,7 @@ def prompt_user() -> AIConfig:
             Fore.GREEN,
             speak_text=True,
         )
-        return generate_aiconfig_manual()
+        return generate_aiconfig_manual(send_message, channel)
 
     else:
         try:
@@ -64,10 +67,10 @@ def prompt_user() -> AIConfig:
                 speak_text=True,
             )
 
-            return generate_aiconfig_manual()
+            return generate_aiconfig_manual(send_message, channel)
 
 
-def generate_aiconfig_manual() -> AIConfig:
+def generate_aiconfig_manual(send_message, channel) -> AIConfig:
     """
     Interactively create an AI configuration by prompting the user to provide the name, role, and goals of the AI.
 
@@ -87,18 +90,22 @@ def generate_aiconfig_manual() -> AIConfig:
         " defaults.",
         speak_text=True,
     )
+    send_message(
+        "Create an AI-Assistant: Enter the name of your AI and its role below. Entering nothing will load defaults."
+    )
 
     # Get AI Name from User
     logger.typewriter_log(
         "Name your AI: ", Fore.GREEN, "For example, 'Entrepreneur-GPT'"
     )
-    ai_name = utils.clean_input("AI Name: ")
+    ai_name = utils.clean_input("AI Name: ", channel=channel, send_message=send_message)
     if ai_name == "":
         ai_name = "Entrepreneur-GPT"
 
     logger.typewriter_log(
         f"{ai_name} here!", Fore.LIGHTBLUE_EX, "I am at your service.", speak_text=True
     )
+    send_message(f"{ai_name} here! I am at your service.")
 
     # Get AI Role from User
     logger.typewriter_log(
@@ -107,7 +114,12 @@ def generate_aiconfig_manual() -> AIConfig:
         "For example, 'an AI designed to autonomously develop and run businesses with"
         " the sole goal of increasing your net worth.'",
     )
-    ai_role = utils.clean_input(f"{ai_name} is: ")
+    send_message(
+        f'Describe your AI\'s role: For example, "an AI designed to autonomously develop and run businesses with the sole goal of increasing your net worth."'
+    )
+    ai_role = utils.clean_input(
+        f"{ai_name} is: ", channel=channel, send_message=send_message
+    )
     if ai_role == "":
         ai_role = "an AI designed to autonomously develop and run businesses with the"
         " sole goal of increasing your net worth."
@@ -119,10 +131,17 @@ def generate_aiconfig_manual() -> AIConfig:
         "For example: \nIncrease net worth, Grow Twitter Account, Develop and manage"
         " multiple businesses autonomously'",
     )
+    send_message(
+        f"Enter up to 5 goals for your AI: For example: Increase net worth, Grow Twitter Account, Develop and manage multiple businesses autonomously"
+    )
     logger.info("Enter nothing to load defaults, enter nothing when finished.")
     ai_goals = []
     for i in range(5):
-        ai_goal = utils.clean_input(f"{Fore.LIGHTBLUE_EX}Goal{Style.RESET_ALL} {i+1}: ")
+        ai_goal = utils.clean_input(
+            f"{Fore.LIGHTBLUE_EX}Goal{Style.RESET_ALL} {i+1}: ",
+            channel=channel,
+            send_message=send_message,
+        )
         if ai_goal == "":
             break
         ai_goals.append(ai_goal)
@@ -139,9 +158,12 @@ def generate_aiconfig_manual() -> AIConfig:
         Fore.GREEN,
         "For example: $1.50",
     )
+    send_message(f"Enter your budget for API calls: For example: $1.50")
     logger.info("Enter nothing to let the AI run without monetary limit")
     api_budget_input = utils.clean_input(
-        f"{Fore.LIGHTBLUE_EX}Budget{Style.RESET_ALL}: $"
+        f"{Fore.LIGHTBLUE_EX}Budget{Style.RESET_ALL}: $",
+        channel=channel,
+        send_message=send_message,
     )
     if api_budget_input == "":
         api_budget = 0.0
@@ -152,6 +174,7 @@ def generate_aiconfig_manual() -> AIConfig:
             logger.typewriter_log(
                 "Invalid budget input. Setting budget to unlimited.", Fore.RED
             )
+            send_message("Invalid budget input. Setting budget to unlimited.")
             api_budget = 0.0
 
     return AIConfig(ai_name, ai_role, ai_goals, api_budget)

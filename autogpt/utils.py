@@ -1,5 +1,6 @@
 import os
 import re
+from typing import Callable, Optional
 
 import requests
 import yaml
@@ -7,6 +8,7 @@ from colorama import Fore, Style
 from git.repo import Repo
 
 from autogpt.logs import logger
+from autogpt.server.server import AutoGptResponse, Channel, UserInput
 
 # Use readline if available (for clean_input)
 try:
@@ -17,7 +19,12 @@ except ImportError:
 from autogpt.config import Config
 
 
-def clean_input(prompt: str = "", talk=False):
+def clean_input(
+    prompt: str = "",
+    talk=False,
+    channel: Optional[Channel] = None,
+    send_message: Callable[[str, str], None] = lambda _message, _type: None,
+):
     try:
         cfg = Config()
         if cfg.chat_messages_enabled:
@@ -50,7 +57,21 @@ def clean_input(prompt: str = "", talk=False):
 
         # ask for input, default when just pressing Enter is y
         logger.info("Asking user via keyboard...")
-        answer = input(prompt)
+        if channel:
+            logger.debug("Waiting for input from queue")
+            while True:
+                send_message(prompt)
+                send_message(None, AutoGptResponse.WAIT_FOR_INPUT_TYPE)
+                user_input: UserInput = channel.client_queue.get()
+                if user_input.type == UserInput.RESPONSE_TYPE:
+                    answer = user_input.prompt
+                    break
+                elif user_input.type == UserInput.EXIT_TYPE:
+                    raise KeyboardInterrupt
+                else:
+                    channel.server_queue.put(AutoGptResponse("Invalid user input type"))
+        else:
+            answer = input(prompt)
         return answer
     except KeyboardInterrupt:
         logger.info("You interrupted Auto-GPT")

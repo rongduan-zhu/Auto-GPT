@@ -142,8 +142,12 @@ class AIConfig:
         prompt_generator.role = self.ai_role
         prompt_generator.command_registry = self.command_registry
         for plugin in cfg.plugins:
+            from autogpt.logs import logger
+            logger.debug(f"Checking if {plugin} can handle post prompt")
             if not plugin.can_handle_post_prompt():
+                logger.debug(f"{plugin} cannot handle post prompt")
                 continue
+            logger.debug(f"{plugin} can handle post prompt")
             prompt_generator = plugin.post_prompt(prompt_generator)
 
         if cfg.execute_local_commands:

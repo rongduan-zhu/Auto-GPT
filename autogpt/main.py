@@ -13,6 +13,7 @@ from autogpt.logs import logger
 from autogpt.memory import get_memory
 from autogpt.plugins import scan_plugins
 from autogpt.prompts.prompt import DEFAULT_TRIGGERING_PROMPT, construct_main_ai_config
+from autogpt.server.server import Channel, send_to_server
 from autogpt.utils import (
     get_current_git_branch,
     get_latest_bulletin,
@@ -37,6 +38,7 @@ def run_auto_gpt(
     skip_news: bool,
     workspace_directory: str,
     install_plugin_deps: bool,
+    channel: Channel,
 ):
     # Configure logging before we do anything else.
     logger.set_level(logging.DEBUG if debug else logging.INFO)
@@ -147,7 +149,7 @@ def run_auto_gpt(
         command_registry.import_commands(command_category)
 
     ai_name = ""
-    ai_config = construct_main_ai_config()
+    ai_config = construct_main_ai_config(send_to_server(channel), channel)
     ai_config.command_registry = command_registry
     # print(prompt)
     # Initialize variables
@@ -182,5 +184,6 @@ def run_auto_gpt(
         system_prompt=system_prompt,
         triggering_prompt=DEFAULT_TRIGGERING_PROMPT,
         workspace_directory=workspace_directory,
+        channel=channel,
     )
     agent.start_interaction_loop()

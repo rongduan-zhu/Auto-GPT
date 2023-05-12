@@ -1,6 +1,8 @@
 """Main script for the autogpt package."""
 import click
 
+from autogpt.server.server import start_server_in_background
+
 
 @click.group(invoke_without_command=True)
 @click.option("-c", "--continuous", is_flag=True, help="Enable Continuous Mode")
@@ -60,6 +62,10 @@ import click
     is_flag=True,
     help="Installs external dependencies for 3rd party plugins.",
 )
+@click.option(
+    "--serve",
+    help="Starts a web socket server to serve the AutoGPT API at the specified address. For example: localhost:8765",
+)
 @click.pass_context
 def main(
     ctx: click.Context,
@@ -77,6 +83,7 @@ def main(
     skip_news: bool,
     workspace_directory: str,
     install_plugin_deps: bool,
+    serve: str,
 ) -> None:
     """
     Welcome to AutoGPT an experimental open-source application showcasing the capabilities of the GPT-4 pushing the boundaries of AI.
@@ -86,23 +93,33 @@ def main(
     # Put imports inside function to avoid importing everything when starting the CLI
     from autogpt.main import run_auto_gpt
 
+    try:
+        host, port = serve.split(":")
+        port = int(port)
+    except:
+        print(f"Error: Invalid serve address: {serve}")
+        host = None
+        port = None
+
     if ctx.invoked_subcommand is None:
-        run_auto_gpt(
-            continuous,
-            continuous_limit,
-            ai_settings,
-            skip_reprompt,
-            speak,
-            debug,
-            gpt3only,
-            gpt4only,
-            memory_type,
-            browser_name,
-            allow_downloads,
-            skip_news,
-            workspace_directory,
-            install_plugin_deps,
-        )
+        with start_server_in_background(host, port) as channel:
+            run_auto_gpt(
+                continuous,
+                continuous_limit,
+                ai_settings,
+                skip_reprompt,
+                speak,
+                debug,
+                gpt3only,
+                gpt4only,
+                memory_type,
+                browser_name,
+                allow_downloads,
+                skip_news,
+                workspace_directory,
+                install_plugin_deps,
+                channel,
+            )
 
 
 if __name__ == "__main__":
